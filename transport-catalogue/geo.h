@@ -1,25 +1,32 @@
-#pragma once
+#pragma once 
+#include <cmath>  
 
-#include <cmath>
-
+// Структура для хранения географических координат
 struct Coordinates {
-    double lat;
-    double lng;
+    double latitude;  // Широта в градусах
+    double longitude;  // Долгота в градусах
+    
+    // Оператор сравнения на равенство для координат
     bool operator==(const Coordinates& other) const {
-        return lat == other.lat && lng == other.lng;
-    }
-    bool operator!=(const Coordinates& other) const {
-        return !(*this == other);
+        return latitude == other.latitude  // Сравнение широт
+            && longitude == other.longitude;  // Сравнение долгот
     }
 };
 
-inline double ComputeDistance(Coordinates from, Coordinates to) {
-    using namespace std;
-    if (from == to) {
-        return 0;
+// Функция для вычисления расстояния между двумя точками на поверхности Земли
+inline double ComputeDistance(Coordinates start, Coordinates end) {
+    using namespace std; 
+    
+    // Проверка на совпадение начальной и конечной точек
+    if (!(start == end)) {
+        const double dr = 3.1415926535 / 180.;  // Константа для перевода градусов в радианы
+        
+        // Формула гаверсинуса для вычисления расстояния между двумя точками на сфере
+        return acos(sin(start.latitude * dr) * sin(end.latitude * dr) 
+                    + cos(start.latitude * dr) * cos(end.latitude * dr) 
+                    * cos(abs(start.longitude - end.longitude) * dr))  
+                    * 6371000;  
+    } else {
+        return 0.0;  
     }
-    static const double dr = 3.1415926535 / 180.;
-    return acos(sin(from.lat * dr) * sin(to.lat * dr)
-                + cos(from.lat * dr) * cos(to.lat * dr) * cos(abs(from.lng - to.lng) * dr))
-        * 6371000;
 }
