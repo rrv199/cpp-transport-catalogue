@@ -1,78 +1,76 @@
-#include "transport_catalogue.h"  
-#include <execution>             
+#include "transport_catalogue.h"
+
 namespace TransportSystem {
-// Метод добавления новой остановки в каталог
+
+// Добавляет новую остановку в каталог
 void TransportCatalogue::add_stop(Stop&& stop_) {
-    stops_.push_back(std::move(stop_));                // Добавление остановки в вектор с использованием move-семантики
-    Stop* stop_buf = &stops_.back();                   // Получение указателя на последнюю добавленную остановку
-    stopname_to_stop.insert(StopMap::value_type(stop_buf->name_, stop_buf));  // Добавление связи имя-указатель в карту
+    stops_.push_back(std::move(stop_));
+    Stop* stop_ptr = &stops_.back();
+    stopname_to_stop[stop_ptr->name_] = stop_ptr;
 }
 
-// Метод добавления нового автобуса в каталог
+// Добавляет новый маршрут в каталог и обновляет информацию об остановках
 void TransportCatalogue::add_bus(Bus&& bus_) {
-    Bus* bus_buf;
-    buses_.push_back(std::move(bus_));                 // Добавление автобуса в вектор с использованием move-семантики
-    bus_buf = &buses_.back();                         // Получение указателя на последний добавленный автобус
-    busname_to_bus.insert(BusMap::value_type(bus_buf->name_, bus_buf));  // Добавление связи имя-указатель в карту
+    buses_.push_back(std::move(bus_));
+    Bus* bus_ptr = &buses_.back();
+    busname_to_bus[bus_ptr->name_] = bus_ptr;
     
-    // Обновление списка автобусов для каждой остановки маршрута
-    for (Stop* _stop : bus_buf->stops_) {
-        _stop->buses_.push_back(bus_buf);
+    for (Stop* stop : bus_ptr->stops_) {
+        stop_to_buses_[stop].insert(bus_ptr->name_);
     }
 }
 
-// Метод поиска автобуса по имени
-Bus* TransportCatalogue::get_bus(std::string_view _bus_name) {
-    if(busname_to_bus.empty())  // Проверка на пустоту карты
-        return nullptr;
-
-    try {
-        return busname_to_bus.at(_bus_name);  // Попытка получить автобус по имени
-    } catch(const std::out_of_range &e) {
-        return nullptr;  // Возврат nullptr при отсутствии автобуса
-    }
+// Возвращает указатель на маршрут по имени (неконстантная версия)
+Bus* TransportCatalogue::get_bus(std::string_view bus_name) {
+    auto it = busname_to_bus.find(bus_name);
+    return it != busname_to_bus.end() ? it->second : nullptr;
 }
 
-// Метод поиска остановки по имени
-Stop* TransportCatalogue::get_stop(std::string_view _stop_name) {
-    if(stopname_to_stop.empty())  // Проверка на пустоту карты
-        return nullptr;
-
-    try {
-        return stopname_to_stop.at(_stop_name);  // Попытка получить остановку по имени
-    } catch(const std::out_of_range &e) {
-        return nullptr;  // Возврат nullptr при отсутствии остановки
-    }
+// Возвращает указатель на маршрут по имени (константная версия)
+const Bus* TransportCatalogue::get_bus(std::string_view bus_name) const {
+    auto it = busname_to_bus.find(bus_name);
+    return it != busname_to_bus.end() ? it->second : nullptr;
 }
 
-// Метод получения уникальных остановок маршрута автобуса
-std::unordered_set<const Stop*> TransportCatalogue::get_uniq_stops(Bus* bus) {
-    std::unordered_set<const Stop*> unique_stops_;  // Создание множества для хранения уникальных остановок
-    unique_stops_.insert(bus->stops_.begin(), bus->stops_.end());  // Добавление всех остановок в множество
-    return unique_stops_;
+// Возвращает указатель на остановку по имени (неконстантная версия)
+Stop* TransportCatalogue::get_stop(std::string_view stop_name) {
+    auto it = stopname_to_stop.find(stop_name);
+    return it != stopname_to_stop.end() ? it->second : nullptr;
 }
 
-// Метод расчета общей длины маршрута автобуса
-double TransportCatalogue::get_length(Bus* bus) {
-    return transform_reduce(
-        next(bus->stops_.begin()),  // Начало итерации со второй остановки
-        bus->stops_.end(),          // Конец последовательности
-        bus->stops_.begin(),        // Начало последовательности
-        0.0,                       // Начальное значение суммы
-        std::plus<>{},             // Операция сложения
-        [](const Stop* lhs, const Stop* rhs) {  // Лямбда-функция для вычисления расстояния
+// Возвращает указатель на остановку по имени (константная версия)
+const Stop* TransportCatalogue::get_stop(std::string_view stop_name) const {
+    auto it = stopname_to_stop.find(stop_name);
+    return it != stopname_to_stop.end() ? it->second : nullptr;
+}
+
+// Возвращает уникальные остановки маршрута
+std::unordered_set<const Stop*> TransportCatalogue::get_uniq_stops(const Bus* bus) const {
+    return {bus->stops_.begin(), bus->stops_.end()};
+}
+
+// Вычисляет географическую длину маршрута
+double TransportCatalogue::get_length(const Bus* bus) const {
+    return std::transform_reduce(
+        std::next(bus->stops_.begin()),
+        bus->stops_.end(),
+        bus->stops_.begin(),
+        0.0,
+        std::plus<>(),
+        [](const Stop* lhs, const Stop* rhs) {
             return ComputeDistance(
-                {(*lhs).latitude_, (*lhs).longitude_},  // Координаты первой точки
-                {(*rhs).latitude_, (*rhs).longitude_}   // Координаты второй точки
+                {lhs->latitude_, lhs->longitude_},
+                {rhs->latitude_, rhs->longitude_}
             );
         }
     );
 }
 
-// Метод получения уникальных автобусов, проходящих через остановку
-std::unordered_set<const Bus*> TransportCatalogue::stop_get_uniq_buses(Stop* stop) {
-    std::unordered_set<const Bus*> unique_stops_;  // Создание множества для хранения уникальных автобусов
-    unique_stops_.insert(stop->buses_.begin(), stop->buses_.end());  // Добавление всех автобусов в множество
-    return unique_stops_;
+// Возвращает список маршрутов, проходящих через остановку
+const std::set<std::string_view>& TransportCatalogue::get_buses_for_stop(const Stop* stop) const {
+    static const std::set<std::string_view> empty;
+    auto it = stop_to_buses_.find(stop);
+    return it != stop_to_buses_.end() ? it->second : empty;
 }
-}
+
+} // namespace TransportSystem
