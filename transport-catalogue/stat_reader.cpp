@@ -1,41 +1,40 @@
 #include "stat_reader.h"
+#include <iomanip>
+#include <algorithm>
+#include <vector>
 
 namespace TransportSystem::Stat {
-// Обработка запроса о маршруте автобуса
+
+// Обрабатывает запрос информации о маршруте (формат: "Bus <имя маршрута>")
 void query_bus(TransportCatalogue& catalogue, std::string_view str) {
     auto entry = 4; // Длина префикса "Bus "
-    str = str.substr(entry); // Удаляем префикс
-    Bus* bus = catalogue.get_bus(str);
-    if (bus != nullptr) {
-        std::cout << "Bus " << bus->name_ << ": "
-                  << bus->stops_.size() << " stops on route, "
-                  << (catalogue.get_uniq_stops(bus)).size() << " unique stops, "
-                  << std::setprecision(6) << catalogue.get_length(bus) << " route length" << std::endl;
+    str = str.substr(entry);
+    
+    if (Bus* bus = catalogue.get_bus(str)) {
+        auto unique_stops = catalogue.get_uniq_stops(bus);
+        std::cout << "Bus " << bus->name_ << ": " 
+               << bus->stops_.size() << " stops on route, "
+               << unique_stops.size() << " unique stops, "
+               << std::setprecision(6) << catalogue.get_length(bus) << " route length" << std::endl;
     } else {
         std::cout << "Bus " << str << ": not found" << std::endl;
     }
 }
 
-// Обработка запроса об остановке
+// Обрабатывает запрос информации об остановке (формат: "Stop <имя остановки>")
 void query_stop(TransportCatalogue& catalogue, std::string_view stop_name) {
     auto entry = 5; // Длина префикса "Stop "
     stop_name = stop_name.substr(entry);
-    std::unordered_set<const Bus*> unique_buses;
-    std::vector<std::string> bus_name_v;
-    Stop* stop = catalogue.get_stop(stop_name);
-
-    if (stop != NULL) {
-        unique_buses = catalogue.stop_get_uniq_buses(stop);
-        if (unique_buses.size() == 0) {
+    
+    if (Stop* stop = catalogue.get_stop(stop_name)) {
+        const auto& buses = catalogue.get_buses_for_stop(stop);
+        
+        if (buses.empty()) {
             std::cout << "Stop " << stop_name << ": no buses" << std::endl;
         } else {
-            std::cout << "Stop " << stop_name << ": buses ";
-            for (const Bus* _bus : unique_buses) {
-                bus_name_v.push_back(_bus->name_);
-            }
-            std::sort(bus_name_v.begin(), bus_name_v.end());
-            for (std::string_view _bus_name : bus_name_v) {
-                std::cout << _bus_name << " ";
+            std::cout << "Stop " << stop_name << ": buses";
+            for (const auto& bus_name : buses) {
+                std::cout << " " << bus_name;
             }
             std::cout << std::endl;
         }
@@ -44,7 +43,7 @@ void query_stop(TransportCatalogue& catalogue, std::string_view stop_name) {
     }
 }
 
-// Основная функция обработки запросов
+// Определяет тип запроса и перенаправляет на соответствующий обработчик
 void query_(TransportCatalogue& catalogue, std::string_view str) {
     if (str.substr(0, 3) == "Bus") {
         query_bus(catalogue, str);
@@ -55,21 +54,23 @@ void query_(TransportCatalogue& catalogue, std::string_view str) {
     }
 }
 
-// Функция для вывода результатов
+// Основная функция вывода статистики (читает запросы и выводит результаты)
 void output_(TransportCatalogue& catalogue) {
     std::string count;
-    std::getline(std::cin, count);
+    std::getline(std::cin, count); // Чтение количества запросов
     std::string str;
     std::vector<std::string> query;
     auto amount = stoi(count);
-
+    
+    // Чтение всех запросов
     for (int i = 0; i < amount; ++i) {
         std::getline(std::cin, str);
         query.push_back(str);
     }
-
+    
+    // Обработка и вывод результатов для каждого запроса
     for (auto& strr : query) {
         query_(catalogue, strr);
     }
 }
-}
+} // namespace TransportSystem::Stat
