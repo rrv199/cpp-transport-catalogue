@@ -73,4 +73,11 @@ const std::set<std::string_view>& TransportCatalogue::get_buses_for_stop(const S
     return it != stop_to_buses_.end() ? it->second : empty;
 }
 
+BusStats TransportCatalogue::get_bus_stats(const Bus* bus) const {
+    return {
+        bus->stops_.size(),
+        get_uniq_stops(bus).size(),
+        get_length(bus)
+    };
+}
 } // namespace TransportSystem
