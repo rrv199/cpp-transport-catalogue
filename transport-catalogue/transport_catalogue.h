@@ -27,6 +27,11 @@ struct Bus {
     std::string name_;      // Название маршрута
     std::vector<Stop*> stops_;  // Список остановок маршрута
 };
+struct BusStats {
+    size_t stops_count;
+    size_t unique_stops_count;
+    double route_length;
+};
 
 // Класс транспортного справочника
 class TransportCatalogue {
@@ -52,11 +57,7 @@ public:
     // Возвращает список маршрутов через указанную остановку
     const std::set<std::string_view>& get_buses_for_stop(const Stop* stop) const;
     
-    // Возвращает уникальные остановки маршрута
-    std::unordered_set<const Stop*> get_uniq_stops(const Bus* bus) const;
-    
-    // Вычисляет географическую длину маршрута
-    double get_length(const Bus* bus) const;
+    BusStats get_bus_stats(const Bus* bus) const;
 
 private:
     std::deque<Stop> stops_;  // Хранилище остановок
@@ -64,6 +65,12 @@ private:
 
     std::deque<Bus> buses_;  // Хранилище маршрутов
     std::unordered_map<std::string_view, Bus*> busname_to_bus;  // Поиск маршрута по имени
+
+    // Возвращает уникальные остановки маршрута
+    std::unordered_set<const Stop*> get_uniq_stops(const Bus* bus) const;
+    
+    // Вычисляет географическую длину маршрута
+    double get_length(const Bus* bus) const;
 
     // Хранит список маршрутов для каждой остановки
     std::unordered_map<const Stop*, std::set<std::string_view>> stop_to_buses_;
