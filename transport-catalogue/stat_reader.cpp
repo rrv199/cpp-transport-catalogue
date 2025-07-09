@@ -6,20 +6,20 @@
 namespace TransportSystem::Stat { 
 
 // Обрабатывает запрос информации о маршруте (формат: "Bus <имя маршрута>") 
-void query_bus(TransportCatalogue& catalogue, std::string_view str, std::ostream& output) { 
-    auto entry = 4; // Длина префикса "Bus " 
-    str = str.substr(entry); 
-     
-    if (Bus* bus = catalogue.get_bus(str)) { 
-        auto unique_stops = catalogue.get_uniq_stops(bus); 
-        output << "Bus " << bus->name_ << ": "  
-               << bus->stops_.size() << " stops on route, " 
-               << unique_stops.size() << " unique stops, " 
-               << std::setprecision(6) << catalogue.get_length(bus) << " route length" << std::endl; 
-    } else { 
-        output << "Bus " << str << ": not found" << std::endl; 
-    } 
-} 
+void query_bus(TransportCatalogue& catalogue, std::string_view str, std::ostream& output) {  
+    auto entry = 4; // Длина префикса "Bus "  
+    str = str.substr(entry);  
+      
+    if (Bus* bus = catalogue.get_bus(str)) {  
+        const auto stats = catalogue.get_bus_stats(bus);
+        output << "Bus " << bus->name_ << ": "   
+               << stats.stops_count << " stops on route, "  
+               << stats.unique_stops_count << " unique stops, "  
+               << std::setprecision(6) << stats.route_length << " route length" << std::endl;  
+    } else {  
+        output << "Bus " << str << ": not found" << std::endl;  
+    }  
+}  
 
 // Обрабатывает запрос информации об остановке (формат: "Stop <имя остановки>") 
 void query_stop(TransportCatalogue& catalogue, std::string_view stop_name, std::ostream& output) { 
