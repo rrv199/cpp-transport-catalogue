@@ -1,17 +1,19 @@
-#pragma once
-#include "transport_catalogue.h"
-#include <algorithm>
-#include <vector>
+#pragma once 
 
-namespace TransportSystem::Stat {
+#include "transport_catalogue.h" 
+#include <algorithm> 
+#include <vector> 
+#include <iostream>
 
-// Получить информацию об остановке
-void query_stop(TransportCatalogue& catalogue, std::string_view stop_name);
+namespace TransportSystem::Stat { 
 
-// Обработать транспортный запрос
-void query_(TransportCatalogue& catalogue, std::string_view str);
+// Получить информацию об остановке 
+void query_stop(TransportCatalogue& catalogue, std::string_view stop_name, std::ostream& output); 
 
-// Вывести статистику системы
-void output_(TransportCatalogue& catalogue);
+// Обработать транспортный запрос 
+void query_(TransportCatalogue& catalogue, std::string_view str, std::ostream& output); 
 
-} // namespace TransportSystem::Stat
+// Вывести статистику системы 
+void output_(TransportCatalogue& catalogue, std::istream& input, std::ostream& output); 
+
+} // namespace TransportSystem::Stat 
