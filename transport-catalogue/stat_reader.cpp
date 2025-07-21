@@ -1,77 +1,54 @@
-#include "stat_reader.h" 
-#include <iomanip> 
-#include <algorithm> 
-#include <vector> 
 
-namespace TransportSystem::Stat { 
+#include "stat_reader.h"
+#include <iomanip>
 
-// Обрабатывает запрос информации о маршруте (формат: "Bus <имя маршрута>") 
-void query_bus(TransportCatalogue& catalogue, std::string_view str, std::ostream& output) {  
-    auto entry = 4; // Длина префикса "Bus "  
-    str = str.substr(entry);  
-      
-    if (Bus* bus = catalogue.get_bus(str)) {  
-        const auto stats = catalogue.get_bus_stats(bus);
-        output << "Bus " << bus->name_ << ": "   
-               << stats.stops_count << " stops on route, "  
-               << stats.unique_stops_count << " unique stops, "  
-               << std::setprecision(6) << stats.route_length << " route length" << std::endl;  
-    } else {  
-        output << "Bus " << str << ": not found" << std::endl;  
-    }  
-}  
+namespace TransportSystem::Stat {
 
-// Обрабатывает запрос информации об остановке (формат: "Stop <имя остановки>") 
-void query_stop(TransportCatalogue& catalogue, std::string_view stop_name, std::ostream& output) { 
-    auto entry = 5; // Длина префикса "Stop " 
-    stop_name = stop_name.substr(entry); 
-     
-    if (Stop* stop = catalogue.get_stop(stop_name)) { 
-        const auto& buses = catalogue.get_buses_for_stop(stop); 
-         
-        if (buses.empty()) { 
-            output << "Stop " << stop_name << ": no buses" << std::endl; 
-        } else { 
-            output << "Stop " << stop_name << ": buses"; 
-            for (const auto& bus_name : buses) { 
-                output << " " << bus_name; 
-            } 
-            output << std::endl; 
-        } 
-    } else { 
-        output << "Stop " << stop_name << ": not found" << std::endl; 
-    } 
-} 
+using namespace std;
 
-// Определяет тип запроса и перенаправляет на соответствующий обработчик 
-void query_(TransportCatalogue& catalogue, std::string_view str, std::ostream& output) { 
-    if (str.substr(0, 3) == "Bus") { 
-        query_bus(catalogue, str, output); 
-    } else if (str.substr(0, 4) == "Stop") { 
-        query_stop(catalogue, str, output); 
-    } else { 
-        output << "Error query" << std::endl; 
-    } 
-} 
+void PrintBusInfo(const TransportCatalogue& catalogue, string_view bus_name, ostream& output) {
+    auto stats = catalogue.GetBusStats(bus_name);
+    if (stats.stops_count == 0) {
+        output << "Bus " << bus_name << ": not found" << endl;
+    } else {
+        output << "Bus " << bus_name << ": " 
+               << stats.stops_count << " stops on route, "
+               << stats.unique_stops_count << " unique stops, "
+               << fixed << setprecision(6) << stats.route_length << " route length, "
+               << stats.curvature << " curvature" << endl;
+    }
+}
 
-// Основная функция вывода статистики (читает запросы и выводит результаты) 
-void output_(TransportCatalogue& catalogue, std::istream& input, std::ostream& output) { 
-    std::string count; 
-    std::getline(input, count); // Чтение количества запросов 
-    std::string str; 
-    std::vector<std::string> query; 
-    auto amount = stoi(count); 
-     
-    // Чтение всех запросов 
-    for (int i = 0; i < amount; ++i) { 
-        std::getline(input, str); 
-        query.push_back(str); 
-    } 
-     
-    // Обработка и вывод результатов для каждого запроса 
-    for (auto& strr : query) { 
-        query_(catalogue, strr, output); 
-    } 
-} 
+void PrintStopInfo(const TransportCatalogue& catalogue, string_view stop_name, ostream& output) {
+    auto buses = catalogue.GetBusesForStop(stop_name);
+    if (catalogue.GetStop(stop_name) == nullptr) {
+        output << "Stop " << stop_name << ": not found" << endl;
+    } else if (buses.empty()) {
+        output << "Stop " << stop_name << ": no buses" << endl;
+    } else {
+        output << "Stop " << stop_name << ": buses";
+        for (string_view bus : buses) {
+            output << " " << bus;
+        }
+        output << endl;
+    }
+}
 
-} // namespace TransportSystem::Stat 
+void ProcessQueries(const TransportCatalogue& catalogue, std::istream& input, std::ostream& output) {
+    string line;
+    getline(input, line);
+    int query_count = stoi(line);
+    
+    for (int i = 0; i < query_count; ++i) {
+        getline(input, line);
+        if (line.empty()) continue;
+        
+        if (line.substr(0, 4) == "Bus ") {
+            PrintBusInfo(catalogue, line.substr(4), output);
+        } else if (line.substr(0, 5) == "Stop ") {
+            PrintStopInfo(catalogue, line.substr(5), output);
+        }
+    }
+}
+
+} // namespace TransportSystem::Stat
