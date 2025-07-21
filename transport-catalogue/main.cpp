@@ -13,10 +13,10 @@ int main() {
         TransportCatalogue catalogue;
         
         // Читаем и обрабатываем входные данные
-        Input::input_(catalogue);
+        Input::ParseAndLoadData(catalogue, cin);
         
-        // Обрабатываем запросы (добавлено Stat::)
-        Stat::output_(catalogue, cin, cout);
+        // Обрабатываем запросы
+        Stat::ProcessQueries(catalogue, cin, cout);
         
         return 0;
     } catch (const exception& e) {
