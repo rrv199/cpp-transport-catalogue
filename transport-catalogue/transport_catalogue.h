@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <deque>
@@ -9,71 +10,63 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <set>
+#include <utility>
 #include "geo.h"
 
 namespace TransportSystem {
 
 struct Bus;
 
-// Структура описывающая остановку
 struct Stop {
-    std::string name_;      // Название остановки
-    double latitude_;       // Географическая широта
-    double longitude_;      // Географическая долгота
+    std::string name_;
+    double latitude_;
+    double longitude_;
+
+
+struct Bus {
+    std::string name_;
+    std::vector<const Stop*> stops_;
+    bool is_roundtrip_;
 };
 
-// Структура описывающая маршрут
-struct Bus {
-    std::string name_;      // Название маршрута
-    std::vector<Stop*> stops_;  // Список остановок маршрута
-};
 struct BusStats {
     size_t stops_count;
     size_t unique_stops_count;
     double route_length;
+    double curvature;
 };
 
-// Класс транспортного справочника
+struct StopPairHash {
+    size_t operator()(const std::pair<const Stop*, const Stop*>& p) const {
+        auto hash1 = std::hash<const void*>{}(p.first);
+        auto hash2 = std::hash<const void*>{}(p.second);
+        return hash1 ^ (hash2 << 1);
+    }
+};
+
 class TransportCatalogue {
 public:
-    // Добавляет маршрут в каталог
-    void add_bus(Bus&& bus);
+    void AddStop(Stop stop);
+    void AddBus(Bus bus);
+    void AddDistance(std::string_view from, std::string_view to, unsigned distance);
     
-    // Добавляет остановку в каталог
-    void add_stop(Stop&& stop);
+    const Stop* GetStop(std::string_view name) const;
+    const Bus* GetBus(std::string_view name) const;
     
-    // Возвращает маршрут по имени (неконстантная версия)
-    Bus* get_bus(std::string_view bus_name);
-    
-    // Возвращает маршрут по имени (константная версия)
-    const Bus* get_bus(std::string_view bus_name) const;
-    
-    // Возвращает остановку по имени (неконстантная версия)
-    Stop* get_stop(std::string_view stop_name);
-    
-    // Возвращает остановку по имени (константная версия)
-    const Stop* get_stop(std::string_view stop_name) const;
-
-    // Возвращает список маршрутов через указанную остановку
-    const std::set<std::string_view>& get_buses_for_stop(const Stop* stop) const;
-    
-    BusStats get_bus_stats(const Bus* bus) const;
+    BusStats GetBusStats(std::string_view bus_name) const;
+    std::set<std::string_view> GetBusesForStop(std::string_view stop_name) const;
 
 private:
-    std::deque<Stop> stops_;  // Хранилище остановок
-    std::unordered_map<std::string_view, Stop*> stopname_to_stop;  // Поиск остановки по имени
-
-    std::deque<Bus> buses_;  // Хранилище маршрутов
-    std::unordered_map<std::string_view, Bus*> busname_to_bus;  // Поиск маршрута по имени
-
-    // Возвращает уникальные остановки маршрута
-    std::unordered_set<const Stop*> get_uniq_stops(const Bus* bus) const;
-    
-    // Вычисляет географическую длину маршрута
-    double get_length(const Bus* bus) const;
-
-    // Хранит список маршрутов для каждой остановки
+    std::deque<Stop> stops_;
+    std::unordered_map<std::string_view, Stop*> stopname_to_stop_;
+    std::deque<Bus> buses_;
+    std::unordered_map<std::string_view, Bus*> busname_to_bus_;
     std::unordered_map<const Stop*, std::set<std::string_view>> stop_to_buses_;
-};
+    std::unordered_map<std::pair<const Stop*, const Stop*>, unsigned, StopPairHash> distances_;
+
+    double CalculateGeographicLength(const Bus* bus) const;
+    double CalculateRoadLength(const Bus* bus) const;
+    size_t CountUniqueStops(const Bus* bus) const;
+    unsigned GetDistanceBetweenStops(const Stop* from, const Stop* to) const; 
 
 } // namespace TransportSystem
